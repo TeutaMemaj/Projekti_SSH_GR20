@@ -5,6 +5,9 @@ import { admin, protect } from "./../Middleware/AuthMiddleware.js";
 
 const productRoute = express.Router();
 
+
+
+
 // GET ALL PRODUCT
 productRoute.get(
   "/",
@@ -27,7 +30,60 @@ productRoute.get(
     res.json({ products, page, pages: Math.ceil(count / pageSize) });
   })
 );
+productRoute.get('/top-rated', asyncHandler(async (req, res) => {
+  const pageSize = 12;
+  const page = Number(req.query.pageNumber) || 1;
+  const keyword = req.query.keyword
+    ? {
+        name: {
+          $regex: req.query.keyword,
+          $options: 'i',
+        },
+      }
+    : {};
+  const count = await Product.countDocuments({ ...keyword });
+  
+  // Sort the products by rating in descending order
+  const products = await Product.find({ ...keyword })
+    .limit(pageSize)
+    .skip(pageSize * (page - 1))
+    .sort({ rating: -1 });
 
+  res.json({ products, page, pages: Math.ceil(count / pageSize) });
+}));
+/**
+ * @swagger
+ * /products/all:
+ *   get:
+ *     tags: [Product]
+ *     summary: Get all products (admin only)
+ *     description: Get a list of all products (admin only)
+ *     security:
+ *       - BearerAuth: []
+ *     produces:
+ *       - application/json
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           type: array
+ *           items:
+ *             $ref: '#/definitions/Product'
+ *       401:
+ *         description: Unauthorized
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       403:
+ *         description: Forbidden
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
 // ADMIN GET ALL PRODUCT WITHOUT SEARCH AND PEGINATION
 productRoute.get(
   "/all",
@@ -38,6 +94,35 @@ productRoute.get(
     res.json(products);
   })
 );
+/**
+ * @swagger
+ * /products/{id}:
+ *   get:
+ *     tags: [Product]
+ *     summary: Get a single product
+ *     description: Get detailed information about a specific product
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: Product ID
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           $ref: '#/definitions/Product'
+ *       404:
+ *         description: Product not found
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
 
 // GET SINGLE PRODUCT
 productRoute.get(
@@ -52,7 +137,60 @@ productRoute.get(
     }
   })
 );
-
+/**
+ * @swagger
+ * /products/{id}/review:
+ *   post:
+ *     tags: [Product]
+ *     summary: Add a review to a product
+ *     description: Add a review to a specific product
+ *     security:
+ *       - BearerAuth: []
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: Product ID
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: body
+ *         name: review
+ *         description: Review details
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/ProductReview'
+ *     responses:
+ *       201:
+ *         description: Review added successfully
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       400:
+ *         description: Bad request
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       401:
+ *         description: Unauthorized
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       404:
+ *         description: Product not found
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
 // PRODUCT REVIEW
 productRoute.post(
   "/:id/review",
@@ -91,6 +229,48 @@ productRoute.post(
   })
 );
 
+
+/**
+ * @swagger
+ * /products/{id}:
+ *   delete:
+ *     tags: [Product]
+ *     summary: Delete a product
+ *     description: Delete a specific product by ID (admin only)
+ *     security:
+ *       - BearerAuth: []
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: Product ID
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Product deleted successfully
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       401:
+ *         description: Unauthorized
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       404:
+ *         description: Product not found
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
 // DELETE PRODUCT
 productRoute.delete(
   "/:id",
@@ -108,6 +288,45 @@ productRoute.delete(
   })
 );
 
+
+/**
+ * @swagger
+ * /products:
+ *   post:
+ *     tags: [Product]
+ *     summary: Create a new product
+ *     description: Create a new product (admin only)
+ *     security:
+ *       - BearerAuth: []
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - in: body
+ *         name: product
+ *         description: Product details
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/NewProduct'
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         schema:
+ *           $ref: '#/definitions/Product'
+ *       400:
+ *         description: Bad request
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       401:
+ *         description: Unauthorized
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
 // CREATE PRODUCT
 productRoute.post(
   "/",
@@ -139,6 +358,60 @@ productRoute.post(
   })
 );
 
+
+/**
+ * @swagger
+ * /products/{id}:
+ *   put:
+ *     tags: [Product]
+ *     summary: Update a product
+ *     description: Update a specific product by ID (admin only)
+ *     security:
+ *       - BearerAuth: []
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         description: Product ID
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: body
+ *         name: product
+ *         description: Updated product details
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/UpdateProduct'
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *         schema:
+ *           $ref: '#/definitions/Product'
+ *       400:
+ *         description: Bad request
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       401:
+ *         description: Unauthorized
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ *       404:
+ *         description: Product not found
+ *         schema:
+ *           type: object
+ *           properties:
+ *             message:
+ *               type: string
+ */
+
+
 // UPDATE PRODUCT
 productRoute.put(
   "/:id",
@@ -162,4 +435,7 @@ productRoute.put(
     }
   })
 );
+
+
+
 export default productRoute;
